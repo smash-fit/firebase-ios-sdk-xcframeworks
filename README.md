@@ -18,4 +18,6 @@ Run the **Publish Release** workflow and enter the Firebase version, or from the
 gh workflow run package.yml -R smash-fit/firebase-ios-sdk-xcframeworks -f version=12.19.3
 ```
 
-The workflow commits the generated `Package.swift` and `Sources`, tags the version and uploads the zipped xcframeworks to a GitHub release. This repository has to stay public: Swift Package Manager and Xcode Cloud download those zips without authentication.
+The workflow commits the generated `Package.swift` and `Sources`, tags the version and uploads the zipped xcframeworks to a GitHub release. To publish from a Mac instead, with `gh` logged in, run `cd .scripts && bash ./package.sh 12.19.3` from a clean checkout of `master`, or add `--skip-release` for a dry run.
+
+This repository has to stay public: Swift Package Manager and Xcode Cloud download those zips without authentication.
