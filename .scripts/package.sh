@@ -335,6 +335,8 @@ analytics_frameworks=(FirebaseAnalytics GoogleAdsOnDeviceConversion GoogleAppMea
 core_library="FirebaseCoreBase"
 google_team_id="EQHXZ8M8AV"
 
+if git ls-remote --exit-code --tags origin "$latest" > /dev/null; then echo "$latest is already published"; exit 1; fi
+
 distribution="dist"
 sources="Sources"
 package="Package.swift"
@@ -383,7 +385,7 @@ echo "Publishing $latest..."
 git add -A "$sources" "$package"
 git commit -m "Firebase $latest"
 git tag "$latest"
-git push origin HEAD "$latest"
+git push --atomic origin HEAD "$latest"
 gh release create "$latest" --title "Firebase $latest" --notes "Firebase Apple $latest from the official Firebase.zip, pruned to the products listed in .scripts/package.sh." "$scratch/$distribution"/*.xcframework.zip
 
 echo "Done."
