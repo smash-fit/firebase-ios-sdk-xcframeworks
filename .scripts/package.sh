@@ -1,14 +1,5 @@
 #!/bin/bash
 
-latest_release_number () {
-    # Github cli to get the latest release
-    gh release list --repo $1 --limit 1 |
-    # Regex to find the version number, assumes semantic versioning
-    grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' |
-    # Take the first match in the regex
-    head -1 || echo '0.0.0'
-}
-
 xcframework_name () {
     # Filter out path and extension to get the framework name
     # Ex. xcframework_name "FirebaseFirestore/leveldb-library.xcframework" = "leveldb-library"
@@ -48,9 +39,31 @@ template_replace () {
 create_scratch () {
     # Create temporary directory
     scratch=$(mktemp -d -t TemporaryDirectory)
-    if [[ $debug ]]; then open $scratch; fi
     # Run cleanup on exit
-    trap "if [[ \$debug ]]; then read -p \"\"; fi; rm -rf \"$scratch\"" EXIT
+    trap "rm -rf \"$scratch\"" EXIT
+}
+
+prune_firebase () {
+    # Drop every product we do not ship. Firebase.zip keeps Firebase Core and its shared
+    # dependencies in the FirebaseAnalytics folder, next to Analytics itself: keep the folder
+    # under a neutral name and remove only the Analytics frameworks from it.
+    for dir in */; do
+        local name="${dir%/}"
+        if [[ "$name" != "FirebaseAnalytics" && " ${products[*]} " != *" $name "* ]]; then rm -rf "$name"; fi
+    done
+    for framework in "${analytics_frameworks[@]}"; do rm -rf "FirebaseAnalytics/$framework.xcframework"; done
+    mv FirebaseAnalytics "$core_library"
+}
+
+verify_firebase () {
+    # Refuse a zip that is not the requested version, or a framework Google did not sign.
+    local found=$(plutil -extract CFBundleShortVersionString raw "$core_library/FirebaseCore.xcframework/ios-arm64/FirebaseCore.framework/Info.plist")
+    if [[ "$found" != "$latest" ]]; then echo "Firebase.zip holds $found, expected $latest"; exit 1; fi
+    for i in */*.xcframework; do
+        codesign --verify --deep --strict "$i"
+        local signature=$(codesign -dv "$i" 2>&1)
+        if [[ "$signature" != *"TeamIdentifier=$google_team_id"* ]]; then echo "$i is not signed by Google"; exit 1; fi
+    done
 }
 
 rename_frameworks () {
@@ -76,7 +89,11 @@ prepare_files_for_distribution () {
     # Create the distribution folder
     mkdir $dist
     # Copy unzipped frameworks for testing (Package.swift using local binaries)
-    for i in */*.xcframework; do cp -rf $i $dist; done
+    # The same framework sits in several product folders: copy it once, keeping symlinks,
+    # so that its signature stays valid
+    for i in */*.xcframework; do
+        if [ ! -e "$dist/$(basename "$i")" ]; then cp -R "$i" "$dist"; fi
+    done
     # Copy zipped frameworks for release (these will be uploaded to remote)
     for i in */*.xcframework.zip; do cp -f $i $dist; done
 }
@@ -159,9 +176,9 @@ write_target () {
       name: \"$target\",
       dependencies: [
         \"Firebase\"" >> $output
-    # All targets depend on the core FirebaseAnalytics binaries
-    if [ $target != "FirebaseAnalyticsTarget" ]; then printf ",
-        \"FirebaseAnalyticsTarget\"" >> $output
+    # All targets depend on the core binaries
+    if [ $library != "$core_library" ]; then printf ",
+        \"${core_library}Target\"" >> $output
     fi
     # Library specific dependencies are expected to be inside the $library folder
     echo "$dependencies" | while read -r dependency; do printf ",
@@ -299,95 +316,74 @@ find_and_extract_firebase_zip() {
     echo "Firebase zip found and extracted successfully"
 }
 
-commit_changes() {
-    branch=$1
-    git checkout -b $branch
-    git add .
-    git commit -m"Updated Package.swift and sources for latest firebase sdks - ${branch#release/}"
-    git push -u origin $branch
-    gh pr create --fill
-}
-
 # Exit when any command fails
 set -e
 set -o pipefail
 
+# Usage: package.sh <firebase-version> [--skip-release]
+latest="${1:?Usage: package.sh <firebase-version> [--skip-release]}"
+skip_release=""
+if [[ "${2:-}" == "--skip-release" ]]; then skip_release=1; fi
+
 # Repos
 firebase_repo="https://github.com/firebase/firebase-ios-sdk"
-xcframeworks_repo="https://github.com/akaffenberger/firebase-ios-sdk-xcframeworks"
+xcframeworks_repo="https://github.com/smash-fit/firebase-ios-sdk-xcframeworks"
 
-# Release versions
-latest=$(latest_release_number $firebase_repo)
-current=$(latest_release_number $xcframeworks_repo)
+# The products the noa apps use. Everything else in Firebase.zip is left out.
+products=(FirebaseAppCheck FirebaseAuth FirebaseFirestore FirebaseFunctions FirebaseRemoteConfig FirebaseStorage)
+analytics_frameworks=(FirebaseAnalytics GoogleAdsOnDeviceConversion GoogleAppMeasurement GoogleAppMeasurementIdentitySupport)
+core_library="FirebaseCoreBase"
+google_team_id="EQHXZ8M8AV"
 
-# Args
-debug=$(echo $@ || "" | grep debug)
-skip_release=$(echo $@ || "" | grep skip-release)
+distribution="dist"
+sources="Sources"
+package="Package.swift"
 
-if [[ $latest != $current || $debug ]]; then
-    echo "$current is out of date. Updating to $latest..."
-    distribution="dist"
-    sources="Sources"
-    package="Package.swift"
+# Generate files in a temporary directory
+# Use subshell to return to original directory when finished with scratchwork
+create_scratch
+(
+    cd $scratch
+    home=$OLDPWD
+    echo "Downloading Firebase $latest..."
+    gh release download "$latest" --pattern 'Firebase.zip' --repo $firebase_repo
 
-    # Generate files in a temporary directory
-    # Use subshell to return to original directory when finished with scratchwork
-    create_scratch
-    (
-        cd $scratch
-        home=$OLDPWD
-        echo "Downloading latest release..."
-        gh release download --pattern 'Firebase.zip' --repo $firebase_repo
-        
-        find_and_extract_firebase_zip
-        echo "Preparing xcframeworks for distribution..."
-        cd Firebase
-        rename_frameworks "_"
-        zip_frameworks
-        echo "Creating distribution files..."
-        prepare_files_for_distribution "../$distribution"
-        echo "Creating source files..."
-        generate_sources "../$sources"
-        # Create test package using local binaries and make sure it builds
-        generate_swift_package "../$package" "$home/package_template.swift" "../$distribution" $xcframeworks_repo $distribution
-        echo "Validating..."
-        (cd ..; swift package dump-package | read pac)
-        (cd ..; swift build) # TODO: create tests and replace this line with `(cd ..; swift test)`
-        # Create release package using remote binaries and make sure the Package.swift file is parseable
-        generate_swift_package "../$package" "$home/package_template.swift" "../$distribution" $xcframeworks_repo ''
-        echo "Validating..."
-        (cd ..; swift package dump-package | read pac)
-    )
+    find_and_extract_firebase_zip
+    cd Firebase
+    echo "Keeping only the products we ship..."
+    prune_firebase
+    echo "Verifying version and signatures..."
+    verify_firebase
+    echo "Preparing xcframeworks for distribution..."
+    rename_frameworks "_"
+    zip_frameworks
+    echo "Creating distribution files..."
+    prepare_files_for_distribution "../$distribution"
+    echo "Creating source files..."
+    generate_sources "../$sources"
+    # Create test package using local binaries and make sure it builds
+    generate_swift_package "../$package" "$home/package_template.swift" "../$distribution" $xcframeworks_repo $distribution
+    echo "Validating..."
+    (cd ..; swift package dump-package > /dev/null)
+    (cd ..; swift build)
+    # Create release package using remote binaries and make sure the Package.swift file is parseable
+    generate_swift_package "../$package" "$home/package_template.swift" "../$distribution" $xcframeworks_repo ''
+    echo "Validating..."
+    (cd ..; swift package dump-package > /dev/null)
+)
 
-    echo "Moving files to repo..."; cd ..
-    # Remove any existing files
-    if [ -d $sources ]; then rm -rf "$sources"; fi
-    if [ -f $package ]; then rm -f "$package"; fi
-    # Move generated files into the repo directory
-    mv "$scratch/$sources" "$sources"
-    mv "$scratch/$package" "$package"
+echo "Moving files to repo..."; cd ..
+rm -rf "$sources" "$package"
+mv "$scratch/$sources" "$sources"
+mv "$scratch/$package" "$package"
 
-    # Skips deploy
-    if [[ $skip_release ]]; then echo "Done."; exit 0; fi
+if [[ $skip_release ]]; then echo "Done."; exit 0; fi
 
-    # Deploy to repository
-    echo "Merging changes to Github..."
-    commit_changes "release/$latest"
-
-    # Tag this commit to enable automatic release creation
-    if git rev-parse "$latest" >/dev/null 2>&1; then
-        echo "Tag $latest already exists. Skipping."
-    else
-        # Tag the current commit with the version
-        git tag "$latest"
-        # Push the tag to the remote repository
-        git push origin "$latest"
-    fi
-
-    echo "Creating release"
-    echo "Release $latest" | gh release create --target "release/$latest" --title "Release $latest" $latest $scratch/dist/*.xcframework.zip
-else
-    echo "$current is up to date."
-fi
+echo "Publishing $latest..."
+git add -A "$sources" "$package"
+git commit -m "Firebase $latest"
+git tag "$latest"
+git push origin HEAD "$latest"
+gh release create "$latest" --title "Firebase $latest" --notes "Firebase Apple $latest from the official Firebase.zip, pruned to the products listed in .scripts/package.sh." "$scratch/$distribution"/*.xcframework.zip
 
 echo "Done."

@@ -1,47 +1,21 @@
-# Firebase xcframework integration with SPM
+# firebase-ios-sdk-xcframeworks
 
-A small mirror for https://github.com/firebase/firebase-ios-sdk, to add support for using their binary dependencies (xcframeworks) with swift package manager. 
+Prebuilt Firebase Apple SDK binaries for Swift Package Manager, used by the noa iOS apps.
+Forked from [akaffenberger/firebase-ios-sdk-xcframeworks](https://github.com/akaffenberger/firebase-ios-sdk-xcframeworks).
 
-This repo contains a [Package.swift](https://github.com/akaffenberger/firebase-ios-sdk-xcframeworks/blob/master/Package.swift) file, which uses a `binaryTarget` for all Firebase libraries (xcframework files are hosted in github [releases](https://github.com/akaffenberger/firebase-ios-sdk-xcframeworks/releases)). 
+## What differs from upstream
 
-## Official SPM Support
+- **Only the products we use:** FirebaseAppCheck, FirebaseAuth, FirebaseFirestore, FirebaseFunctions, FirebaseRemoteConfig and FirebaseStorage. Edit `products` in `.scripts/package.sh` to change the list.
+- **No Firebase Analytics:** upstream makes every product depend on Analytics, because `Firebase.zip` keeps Firebase Core in its Analytics folder. Here those core frameworks are a separate `FirebaseCoreBase` target. `FirebaseABTesting` stays because Remote Config links against it.
+- **Exact versions:** a release is built from the `Firebase.zip` of the version you ask for, and fails if the zip holds a different version or a framework Google did not sign. The kept frameworks are not modified, so Google's signatures stay valid.
+- **No scheduled releases:** a release only happens when someone runs the workflow.
 
-Firebase currently supports SPM integration, see the [official SDK integration instructions](https://github.com/firebase/firebase-ios-sdk#installation). This repo is an alternative for integrating with their pre-built xcframeworks for faster build times. See in depth discussion for official SPM support for xcframeworks [here](https://github.com/firebase/firebase-ios-sdk/issues/6564).
+## Publishing a version
 
-# Installation
-- Add the package: 
-    ```
-    // swift-tools-version:5.3
-    // The swift-tools-version declares the minimum version of Swift required to build this package.
+Run the **Publish Release** workflow and enter the Firebase version, or from the command line:
 
-    import PackageDescription
+```bash
+gh workflow run package.yml -R smash-fit/firebase-ios-sdk-xcframeworks -f version=12.19.3
+```
 
-    let package = Package(
-        name: "MyLibrary",
-        platforms: [.iOS(.v11)],
-        products: [
-            .library(name: "MyLibrary", targets: ["MyLibraryTarget"])
-        ],
-        dependencies: [
-            .package(
-                name: "Firebase",
-                url: "https://github.com/akaffenberger/firebase-ios-sdk-xcframeworks.git",
-                .exact("8.10.0")
-            ),
-        ],
-        targets: [
-            .target(
-                name: "MyLibraryTarget",
-                dependencies: [
-                    .product(name: "Google-Mobile-Ads-SDK", package: "Firebase"),
-                    .product(name: "FirebaseAnalytics", package: "Firebase")
-                ]
-            )
-        ]
-    )
-    ```
-
-- Add `-ObjC` to Build Settings -> Other Linker Flags
-- Some Firebase frameworks require resource bundles. Drag and drop the ones you need into your target's Copy Bundle Resources Phase:
-
-  ![](./assets/draganddrop.gif)
+The workflow commits the generated `Package.swift` and `Sources`, tags the version and uploads the zipped xcframeworks to a GitHub release. This repository has to stay public: Swift Package Manager and Xcode Cloud download those zips without authentication.
