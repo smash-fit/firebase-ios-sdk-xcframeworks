@@ -5,7 +5,7 @@ Forked from [akaffenberger/firebase-ios-sdk-xcframeworks](https://github.com/aka
 
 ## What differs from upstream
 
-- **Only the products we use:** FirebaseAppCheck, FirebaseAuth, FirebaseFirestore, FirebaseFunctions, FirebaseRemoteConfig and FirebaseStorage. Edit `products` in `.scripts/package.sh` to change the list.
+- **Only the products we use:** FirebaseAILogic, FirebaseAppCheck, FirebaseAuth, FirebaseFirestore, FirebaseFunctions, FirebaseRemoteConfig and FirebaseStorage. Edit `products` in `.scripts/package.sh` to change the list.
 - **No Firebase Analytics:** upstream makes every product depend on Analytics, because `Firebase.zip` keeps Firebase Core in its Analytics folder. Here those core frameworks are a separate `FirebaseCoreBase` target. `FirebaseABTesting` stays because Remote Config links against it.
 - **Exact versions:** a release is built from the `Firebase.zip` of the version you ask for, and fails if the zip holds a different version or a framework Google did not sign. The kept frameworks are not modified, so Google's signatures stay valid.
 - **No scheduled releases:** a release only happens when someone runs the workflow.

@@ -330,7 +330,7 @@ firebase_repo="https://github.com/firebase/firebase-ios-sdk"
 xcframeworks_repo="https://github.com/smash-fit/firebase-ios-sdk-xcframeworks"
 
 # The products the noa apps use. Everything else in Firebase.zip is left out.
-products=(FirebaseAppCheck FirebaseAuth FirebaseFirestore FirebaseFunctions FirebaseRemoteConfig FirebaseStorage)
+products=(FirebaseAILogic FirebaseAppCheck FirebaseAuth FirebaseFirestore FirebaseFunctions FirebaseRemoteConfig FirebaseStorage)
 analytics_frameworks=(FirebaseAnalytics GoogleAdsOnDeviceConversion GoogleAppMeasurement GoogleAppMeasurementIdentitySupport)
 core_library="FirebaseCoreBase"
 google_team_id="EQHXZ8M8AV"
