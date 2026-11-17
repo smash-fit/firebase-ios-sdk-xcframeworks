@@ -87,7 +87,7 @@ verify_firebase () {
     # Refuse a build that is not the requested version, or a Swift module not compiled by our toolchain.
     local found=$(plutil -extract CFBundleShortVersionString raw "$core_library/FirebaseCore.xcframework/ios-arm64/FirebaseCore.framework/Info.plist")
     if [[ "$found" != "$latest" ]]; then echo "Firebase.zip holds $found, expected $latest"; exit 1; fi
-    local compiler=$(xcrun swiftc --version 2>&1 | grep -o 'swiftlang-[0-9.]*' | head -n 1)
+    local compiler=$(xcrun swiftc --version 2>&1 | grep -o 'swiftlang-[0-9.]*' | sed -n '1p')
     for interface in */*.xcframework/ios-arm64/*.framework/Modules/*.swiftmodule/*.swiftinterface; do
         [ -e "$interface" ] || continue
         local built=$(grep -m 1 -o 'swiftlang-[0-9.]*' "$interface")
@@ -310,7 +310,7 @@ find_and_extract_firebase_zip() {
     echo "Looking for downloaded Firebase zip..."
     
     # Find the zip file and ensure it's called Firebase.zip
-    zip_file=$(find . -name "*.zip" | head -n 1)
+    zip_file=$(find . -name "*.zip" -print -quit)
     
     if [ -n "$zip_file" ]; then
         echo "Found downloaded zip file: $zip_file"
@@ -327,7 +327,7 @@ find_and_extract_firebase_zip() {
         # Look for Firebase zip files in subdirectories (excluding carthage)
         for dir in */; do
             if [ -d "$dir" ] && [ "$dir" != "carthage/" ]; then
-                firebase_zip=$(find "$dir" -name "Firebase*.zip" | head -n 1)
+                firebase_zip=$(find "$dir" -name "Firebase*.zip" -print -quit)
                 if [ -n "$firebase_zip" ]; then
                     echo "Found Firebase zip in $dir: $firebase_zip"
                     unzip -q "$firebase_zip"
@@ -369,7 +369,7 @@ xcframeworks_repo="https://github.com/smash-fit/firebase-ios-sdk-xcframeworks"
 products=(FirebaseAILogic FirebaseAppCheck FirebaseAuth FirebaseFirestore FirebaseFunctions FirebaseRemoteConfig FirebaseStorage)
 analytics_frameworks=(FirebaseAnalytics GoogleAdsOnDeviceConversion GoogleAppMeasurement GoogleAppMeasurementIdentitySupport)
 core_library="FirebaseCoreBase"
-xcode_version=$(xcodebuild -version | head -n 1)
+xcode_version=$(xcodebuild -version | sed -n '1p')
 if [[ "$xcode_version" != "Xcode 27.2" ]]; then echo "Select Xcode 27.2 (found $xcode_version)"; exit 1; fi
 
 if git ls-remote --exit-code --tags origin "$latest" > /dev/null; then
