@@ -37,10 +37,27 @@ template_replace () {
 }
 
 create_scratch () {
-    # Create temporary directory
+    # Create temporary directories: scratch for the package, sdk for the firebase-ios-sdk build
     scratch=$(mktemp -d -t TemporaryDirectory)
+    sdk=$(mktemp -d -t FirebaseSDK)
     # Run cleanup on exit
-    trap "rm -rf \"$scratch\"" EXIT
+    trap "rm -rf \"$scratch\" \"$sdk\"" EXIT
+}
+
+build_firebase () {
+    # Build Firebase.zip from firebase-ios-sdk at $latest with the selected Xcode, using
+    # Firebase's own zip-builder (CocoaPods) in release mode, which gives Firebase.zip's layout,
+    # and leave it in the current directory.
+    local out=$(pwd)
+    git clone -q --depth 1 --branch "$latest" "$firebase_repo" "$sdk/firebase-ios-sdk"
+    mkdir -p "$sdk/build" "$sdk/output"
+    (
+        cd "$sdk/firebase-ios-sdk/ReleaseTooling"
+        swift run zip-builder --local-podspec-path "$sdk/firebase-ios-sdk" --build-root "$sdk/build" --output-dir "$sdk/output"
+    )
+    local zip=$(find "$sdk/output" -name "Firebase*.zip" ! -path "*arthage*" | head -n 1)
+    if [ -z "$zip" ]; then echo "zip-builder produced no Firebase zip"; exit 1; fi
+    mv "$zip" "$out/Firebase.zip"
 }
 
 prune_firebase () {
@@ -56,13 +73,14 @@ prune_firebase () {
 }
 
 verify_firebase () {
-    # Refuse a zip that is not the requested version, or a framework Google did not sign.
+    # Refuse a build that is not the requested version, or a Swift module not compiled by our toolchain.
     local found=$(plutil -extract CFBundleShortVersionString raw "$core_library/FirebaseCore.xcframework/ios-arm64/FirebaseCore.framework/Info.plist")
     if [[ "$found" != "$latest" ]]; then echo "Firebase.zip holds $found, expected $latest"; exit 1; fi
-    for i in */*.xcframework; do
-        codesign --verify --deep --strict "$i"
-        local signature=$(codesign -dv "$i" 2>&1)
-        if [[ "$signature" != *"TeamIdentifier=$google_team_id"* ]]; then echo "$i is not signed by Google"; exit 1; fi
+    local compiler=$(xcrun swiftc --version 2>&1 | grep -o 'swiftlang-[0-9.]*' | head -n 1)
+    for interface in */*.xcframework/ios-arm64/*.framework/Modules/*.swiftmodule/*.swiftinterface; do
+        [ -e "$interface" ] || continue
+        local built=$(grep -m 1 -o 'swiftlang-[0-9.]*' "$interface")
+        if [[ "$built" != "$compiler" ]]; then echo "$interface built by $built, expected $compiler"; exit 1; fi
     done
 }
 
@@ -320,10 +338,15 @@ find_and_extract_firebase_zip() {
 set -e
 set -o pipefail
 
-# Usage: package.sh <firebase-version> [--skip-release]
-latest="${1:?Usage: package.sh <firebase-version> [--skip-release]}"
+# Usage: package.sh <firebase-version> [--skip-release] [--force]
+latest="${1:?Usage: package.sh <firebase-version> [--skip-release] [--force]}"
 skip_release=""
-if [[ "${2:-}" == "--skip-release" ]]; then skip_release=1; fi
+force=""
+for arg in "${@:2}"; do case "$arg" in
+    --skip-release) skip_release=1 ;;
+    --force) force=1 ;;
+    *) echo "Unknown option $arg"; exit 1 ;;
+esac; done
 
 # Repos
 firebase_repo="https://github.com/firebase/firebase-ios-sdk"
@@ -333,9 +356,13 @@ xcframeworks_repo="https://github.com/smash-fit/firebase-ios-sdk-xcframeworks"
 products=(FirebaseAILogic FirebaseAppCheck FirebaseAuth FirebaseFirestore FirebaseFunctions FirebaseRemoteConfig FirebaseStorage)
 analytics_frameworks=(FirebaseAnalytics GoogleAdsOnDeviceConversion GoogleAppMeasurement GoogleAppMeasurementIdentitySupport)
 core_library="FirebaseCoreBase"
-google_team_id="EQHXZ8M8AV"
+xcode_version=$(xcodebuild -version | head -n 1)
+if [[ "$xcode_version" != "Xcode 27.2" ]]; then echo "Select Xcode 27.2 (found $xcode_version)"; exit 1; fi
 
-if git ls-remote --exit-code --tags origin "$latest" > /dev/null; then echo "$latest is already published"; exit 1; fi
+if git ls-remote --exit-code --tags origin "$latest" > /dev/null; then
+    if [[ $force ]]; then echo "$latest is already published, rebuilding it (--force)"
+    else echo "$latest is already published (use --force to rebuild it)"; exit 1; fi
+fi
 
 distribution="dist"
 sources="Sources"
@@ -347,14 +374,14 @@ create_scratch
 (
     cd $scratch
     home=$OLDPWD
-    echo "Downloading Firebase $latest..."
-    gh release download "$latest" --pattern 'Firebase.zip' --repo $firebase_repo
+    echo "Building Firebase $latest with $xcode_version..."
+    build_firebase
 
     find_and_extract_firebase_zip
     cd Firebase
     echo "Keeping only the products we ship..."
     prune_firebase
-    echo "Verifying version and signatures..."
+    echo "Verifying version and compiler..."
     verify_firebase
     echo "Preparing xcframeworks for distribution..."
     rename_frameworks "_"
@@ -384,8 +411,12 @@ if [[ $skip_release ]]; then echo "Done."; exit 0; fi
 echo "Publishing $latest..."
 git add -A "$sources" "$package"
 git commit -m "Firebase $latest"
+if [[ $force ]]; then
+    gh release delete "$latest" --cleanup-tag --yes || true
+    git tag -d "$latest" 2>/dev/null || true
+fi
 git tag "$latest"
 git push --atomic origin HEAD "$latest"
-gh release create "$latest" --title "Firebase $latest" --notes "Firebase Apple $latest from the official Firebase.zip, pruned to the products listed in .scripts/package.sh." "$scratch/$distribution"/*.xcframework.zip
+gh release create "$latest" --title "Firebase $latest" --notes "Firebase Apple $latest built from firebase-ios-sdk $latest with $xcode_version, pruned to the products listed in .scripts/package.sh." "$scratch/$distribution"/*.xcframework.zip
 
 echo "Done."

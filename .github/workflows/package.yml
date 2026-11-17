@@ -6,19 +6,35 @@ on:
       version:
         description: Firebase Apple SDK version, e.g. 12.19.3
         required: true
+      force:
+        description: Rebuild and replace an already published version
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-26
+    timeout-minutes: 300
     env:
       GH_TOKEN: ${{ github.token }}
       VERSION: ${{ inputs.version }}
+      FORCE: ${{ inputs.force && '--force' || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select Xcode 27.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app
+          xcodebuild -version
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods --no-document
+          pod --version
 
       - name: Configure git
         run: |
@@ -26,4 +42,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Release
-        run: cd .scripts && bash ./package.sh "$VERSION"
+        run: cd .scripts && bash ./package.sh "$VERSION" $FORCE
