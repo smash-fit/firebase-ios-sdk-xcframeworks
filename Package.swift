@@ -58,6 +58,9 @@ let package = Package(
         "_FirebaseAppCheckInterop",
         "_FirebaseAuthInterop",
         "_FirebaseCoreExtension",
+        "_GeminiAPIClient",
+        "_GeminiAPIDataModels",
+        "_GeminiLanguageModel",
         .target(name: "_RecaptchaInterop", condition: .when(platforms: [.iOS]))
       ],
       path: "Sources/FirebaseAILogic"
@@ -106,12 +109,12 @@ let package = Package(
       dependencies: [
         "Firebase",
         "FirebaseCoreBaseTarget",
+        "_absl",
         "_FirebaseAppCheckInterop",
         "_FirebaseCoreExtension",
         "_FirebaseFirestore",
         "_FirebaseFirestoreInternal",
         "_FirebaseSharedSwift",
-        "_absl",
         "_grpc",
         "_grpcpp",
         "_leveldb",
@@ -160,149 +163,164 @@ let package = Package(
       path: "Sources/FirebaseStorage"
     ),
     .binaryTarget(
+      name: "_absl",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_absl.xcframework.zip",
+      checksum: "75f111bbbe0da62ff21f4f4d03646648d4bd505b7386d85104150297d94b981a"
+    ),
+    .binaryTarget(
       name: "_AppCheckCore",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_AppCheckCore.xcframework.zip",
-      checksum: "4f231428762ae247efadbaa37b38b6a8c025cc4d3d8dae49bab83e87f91eaf3f"
+      checksum: "e1fd1efddca53057c15982dee1571695d65f09316e0b109753a129a63d0fdb5b"
     ),
     .binaryTarget(
       name: "_FBLPromises",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FBLPromises.xcframework.zip",
-      checksum: "6f8453ca74229838a2a2dfcf1427787ed69bffad90778b136380d0ffe4e60b42"
+      checksum: "2f72ef0fb531d05e9c2be70f6dcbaec79930304015606a72acf4050afca0b691"
     ),
     .binaryTarget(
       name: "_FirebaseABTesting",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseABTesting.xcframework.zip",
-      checksum: "bbea61405b0a5ea0042d2d1ba0eaebe172590f9de0836fe85a4e88d671c4de71"
+      checksum: "95020ae40d87688a45c8c449170f1dc304c30c04ce8853c6ff68562014826023"
     ),
     .binaryTarget(
       name: "_FirebaseAILogic",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseAILogic.xcframework.zip",
-      checksum: "b295238fbb36f69b0caa3705383965ac6282b3c3b67f5f9d5d5f93e73fe90c22"
+      checksum: "e8dfd5ff8d9df26d1da300a8d38c86b7a5bd46765cfa3b4095fa7383a5818a0d"
     ),
     .binaryTarget(
       name: "_FirebaseAppCheck",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseAppCheck.xcframework.zip",
-      checksum: "65e890fcede89a1e6b49fade366f2c24705cbe39698c60c72b3d2544d55c8ce8"
+      checksum: "cc1c41deb74226146175da4addd639e934a97758d19215cf3c1048fbac8d6ac3"
     ),
     .binaryTarget(
       name: "_FirebaseAppCheckInterop",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseAppCheckInterop.xcframework.zip",
-      checksum: "4cbe05c8d9aa435876f96a000aece28cf36465022771cea8b030de1d038bbbd4"
+      checksum: "74056fe7239f34603dd4bc38f6ff37c3e08f4e721986f132af1d9db9ad010fe0"
     ),
     .binaryTarget(
       name: "_FirebaseAuth",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseAuth.xcframework.zip",
-      checksum: "dd8058205e2f48c6ac0ae436337f744eb28234ad53443ba9e4b62d426e50e2cd"
+      checksum: "5ec3361e20f43ceedd1462477634a8434c39d2de01e804509968431b9fa86b02"
     ),
     .binaryTarget(
       name: "_FirebaseAuthInterop",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseAuthInterop.xcframework.zip",
-      checksum: "39405799c3c673cd1344458c755a53071525e113d78188510d9eb07fc090557d"
+      checksum: "bbd337f4bc1906b3d5e7e76ff89db83925bd8ff2d08a0c9a27094bfcb97424f0"
     ),
     .binaryTarget(
       name: "_FirebaseCore",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseCore.xcframework.zip",
-      checksum: "08a12ff877ba65f2713245399069f61f8fb905f866417ef5d05368a13bd17cad"
+      checksum: "460379023f6be1f294ab6e5f39096c132bca84413b6dbeae200f65471a0d1827"
     ),
     .binaryTarget(
       name: "_FirebaseCoreExtension",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseCoreExtension.xcframework.zip",
-      checksum: "4c879bcb83b8ce774f0290bab601c6e28b71bbace24da89ff7de63d78981adce"
+      checksum: "8b794dfdff296497f148f980157ccce1611f9189222f533bb2f791017e273b01"
     ),
     .binaryTarget(
       name: "_FirebaseCoreInternal",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseCoreInternal.xcframework.zip",
-      checksum: "fe885375331ccc6a8947ac3f90bfe45caef3a0fa45437cdd8aee9801f8265069"
+      checksum: "871f574572b221e57d01f8f8bfccabfc745c3a71ea8191eb3244ec520ad96d48"
     ),
     .binaryTarget(
       name: "_FirebaseFirestore",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseFirestore.xcframework.zip",
-      checksum: "98508e7cdb51f096fd22a5f7b5f9573fe3bfb12b936a586aa4274f440744641a"
+      checksum: "ffec9f1c03ffbb0df40a2b6a53d26fb57bd0d4d543e7aa17b30eb07a957bfdb6"
     ),
     .binaryTarget(
       name: "_FirebaseFirestoreInternal",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseFirestoreInternal.xcframework.zip",
-      checksum: "28d3e4fe952c7733d5ae8d62e2cf84b44200c78680be8086ea9c82a22c4c7ac5"
+      checksum: "2a774e91b5abf02b6703a0c0f3fa79e75f762781c19df9030a178cad0eb1ae6e"
     ),
     .binaryTarget(
       name: "_FirebaseFunctions",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseFunctions.xcframework.zip",
-      checksum: "401ca861b18b4d5134a25e8eb8716feef891d2cad1fa1dadb98293c5c73d50f2"
+      checksum: "80b2cd09f0e0693cabef93d5ed73d984db45c0bd14bac853e69ed17ee1f02c85"
     ),
     .binaryTarget(
       name: "_FirebaseInstallations",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseInstallations.xcframework.zip",
-      checksum: "ebe75bb9991eb24d7a5feeb99a06c9756b6b3ce883f4a756c1b3019e53ce3a74"
+      checksum: "c65bfa045c2fc2f91f894088ccc3073a5af24e15f7d4f6b9c5c47423c5c6307c"
     ),
     .binaryTarget(
       name: "_FirebaseMessagingInterop",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseMessagingInterop.xcframework.zip",
-      checksum: "a0aac64099b6cdbbf5713bd2aceb170934bcd506e9b6dd066fbb657e5b4c8557"
+      checksum: "a78b6ea1e7e67d365488dc5388ce47ee89cb764a68926913664bfe323de85cfd"
     ),
     .binaryTarget(
       name: "_FirebaseRemoteConfig",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseRemoteConfig.xcframework.zip",
-      checksum: "d18dc4003bfa4061696a9fab7d89339e44aba262c3dbe7ecb155d87a5f596797"
+      checksum: "037b61dfd62aa89b51d8910ff9d5d87ce3f8296ae8fa56f3b28fd31e86d09527"
     ),
     .binaryTarget(
       name: "_FirebaseRemoteConfigInterop",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseRemoteConfigInterop.xcframework.zip",
-      checksum: "7983834b4bd250ffb331032222bd729d855cb1d0b26cadee51ae377da877a15b"
+      checksum: "5f66af6130a59997f60036fb63e85bdfd348914c88b3472694acf73c9df85b09"
     ),
     .binaryTarget(
       name: "_FirebaseSharedSwift",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseSharedSwift.xcframework.zip",
-      checksum: "a437d5ead5b7214ea3d2b9c6086139a617fc04ffcfa129918ce98d18386f39fe"
+      checksum: "14204883705f695ba2b31497fef0a6bb74d6583bd4dfd2e1eeb62ee748bcc4b9"
     ),
     .binaryTarget(
       name: "_FirebaseStorage",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_FirebaseStorage.xcframework.zip",
-      checksum: "8922d4eb59c224841d95131a8546718e7b0d10edbb5317a3b9237d35a881eded"
+      checksum: "da14ecf123912d6a948fa53ba51bf928665cd2d77a7495644bf03b3a2122bdc3"
     ),
     .binaryTarget(
-      name: "_GTMSessionFetcher",
-      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GTMSessionFetcher.xcframework.zip",
-      checksum: "b9ae9fcf90466e26b23226ed7748defa22d4d55bc525d3cb116cceb851220562"
+      name: "_GeminiAPIClient",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GeminiAPIClient.xcframework.zip",
+      checksum: "8174c44ac2385afb31575bbd59139d01ff05bf6acb44ee5a7c86b80a3071aae3"
+    ),
+    .binaryTarget(
+      name: "_GeminiAPIDataModels",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GeminiAPIDataModels.xcframework.zip",
+      checksum: "3253eaba55328456cf468d386fe832adb034626d181ca5afc745dad1a4d505fd"
+    ),
+    .binaryTarget(
+      name: "_GeminiLanguageModel",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GeminiLanguageModel.xcframework.zip",
+      checksum: "8b2c26cb8d3bcaea927f63cb3be2b8f0a311979f10572edb6a8329132ac0325a"
     ),
     .binaryTarget(
       name: "_GoogleUtilities",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GoogleUtilities.xcframework.zip",
-      checksum: "b7133c874707d193e590d702d50e421f682f03a688f58f2c8e0624d71f5b09c1"
-    ),
-    .binaryTarget(
-      name: "_RecaptchaInterop",
-      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_RecaptchaInterop.xcframework.zip",
-      checksum: "2df989bf6a119d05051b95c4e8b4a816542931f199bdb135c30fd5c9b5ffd7f0"
-    ),
-    .binaryTarget(
-      name: "_absl",
-      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_absl.xcframework.zip",
-      checksum: "6b9ba61746523f822d3878e596a94eaca2a90a10a0ad61c955cdaf27d359fb69"
+      checksum: "b060ce913030fa74cafee6add418a58d7c92273494dd8579bcd9d548606be0d4"
     ),
     .binaryTarget(
       name: "_grpc",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_grpc.xcframework.zip",
-      checksum: "58b9a7b2481f86a59afdd90babea9af2e324f48fda927d878853da7329793da1"
+      checksum: "a5ce98ca784844ed07b993f8b37d39eaab14fc3de71349e21ae2b117f0bfd298"
     ),
     .binaryTarget(
       name: "_grpcpp",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_grpcpp.xcframework.zip",
-      checksum: "62717cf55bb7a2c7fe66f033a795fad4bed714e17b0df3235c922e2e142baf8f"
+      checksum: "3796cabd3f0fbe35ae0efb3f6c930d1b46a5fda1161d95cf85a36c08e8a4f11d"
+    ),
+    .binaryTarget(
+      name: "_GTMSessionFetcher",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_GTMSessionFetcher.xcframework.zip",
+      checksum: "0133ba645188b8560011c233d6b33fa6e5c2d25490b51bdcb1bf5e9bbdf90ed2"
     ),
     .binaryTarget(
       name: "_leveldb",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_leveldb.xcframework.zip",
-      checksum: "80ab59dbd3c742f33fbbcb827bf5a652cdd06eba6902876779ce2927e4184f9c"
+      checksum: "142979aa77ee6b258f81f5ccfbd4532252e7af8cd4264501477d86ab1703fbef"
     ),
     .binaryTarget(
       name: "_nanopb",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_nanopb.xcframework.zip",
-      checksum: "1d4f124610eb8f0ab7586a81ad1c63567b564e1af95c71b75e803b7bed97c028"
+      checksum: "27f6a65712a96c5a9b5bf978daf832fe8012364e687f8bb77cb9b727dcaf6eed"
     ),
     .binaryTarget(
       name: "_openssl_grpc",
       url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_openssl_grpc.xcframework.zip",
-      checksum: "a8c0bb72639029d7fd4b7d5888cd5bcda4fe0974de60d658baa6262199cd0f26"
+      checksum: "db85a412a4291064bec6d9e86f1eb4265605eb1e0a2c5d16876d6bfc4e53fa70"
+    ),
+    .binaryTarget(
+      name: "_RecaptchaInterop",
+      url: "https://github.com/smash-fit/firebase-ios-sdk-xcframeworks/releases/download/13.1.1/_RecaptchaInterop.xcframework.zip",
+      checksum: "c57200bb1c043668215ba18ed0732f07e38000c28370f440b572c8076f1019b8"
     )
   ]
 )
