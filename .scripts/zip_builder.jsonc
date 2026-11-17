@@ -118,6 +118,11 @@
   // The settings below minimize the release diff against the legacy CocoaPods zip distribution.
   // In future releases, they can be removed to ship the modernized modular SwiftPM distribution.
   "build": {
+    // Xcode 27.2's SDKs start at macOS 12 and watchOS 9; Package.swift declares 11 and 8.
+    "deploymentTargets": {
+      "macos": "12.0",
+      "watchos": "9.0"
+    },
     // TODO(#4): Restrict watchOS device slices to [arm64, arm64_32] to match the legacy
     // watchos-arm64_arm64_32 slice naming.
     "architectures": {
