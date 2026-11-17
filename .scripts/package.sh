@@ -54,10 +54,13 @@ build_firebase () {
     (
         cd "$sdk/zip-builder"
         git remote add origin "$firebase_repo"
-        git sparse-checkout set --no-cone /scripts/zip_builder/
+        git sparse-checkout set --no-cone /scripts/zip_builder/ /CoreOnly/licenses/
         git fetch -q --depth 1 origin "$zip_builder_ref"
         git checkout -q FETCH_HEAD
     )
+    # The config's extra licenses live in CoreOnly/licenses on newer firebase-ios-sdk, not in older tags
+    mkdir -p "$sdk/firebase-ios-sdk/CoreOnly/licenses"
+    cp -n "$sdk/zip-builder/CoreOnly/licenses/"* "$sdk/firebase-ios-sdk/CoreOnly/licenses/"
     swift run --package-path "$sdk/zip-builder/scripts/zip_builder" --force-resolved-versions zip-builder release \
         --package-path "$sdk/firebase-ios-sdk" \
         --config "$home/zip_builder.jsonc" \
