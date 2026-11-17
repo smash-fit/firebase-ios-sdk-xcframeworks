@@ -46,17 +46,25 @@ create_scratch () {
 
 build_firebase () {
     # Build Firebase.zip from firebase-ios-sdk at $latest with the selected Xcode, using
-    # Firebase's own zip-builder (CocoaPods) in release mode, which gives Firebase.zip's layout,
-    # and leave it in the current directory.
+    # Firebase's SwiftPM zip_builder and its config from $zip_builder_ref (which gives
+    # Firebase.zip's layout), and leave it in the current directory.
     local out=$(pwd)
     git clone -q --depth 1 --branch "$latest" "$firebase_repo" "$sdk/firebase-ios-sdk"
-    mkdir -p "$sdk/build" "$sdk/output"
+    git init -q "$sdk/zip-builder"
     (
-        cd "$sdk/firebase-ios-sdk/ReleaseTooling"
-        swift run zip-builder --local-podspec-path "$sdk/firebase-ios-sdk" --build-root "$sdk/build" --output-dir "$sdk/output"
+        cd "$sdk/zip-builder"
+        git remote add origin "$firebase_repo"
+        git sparse-checkout set --no-cone /scripts/zip_builder/ /zip_builder.jsonc
+        git fetch -q --depth 1 origin "$zip_builder_ref"
+        git checkout -q FETCH_HEAD
     )
-    local zip=$(find "$sdk/output" -name "Firebase*.zip" ! -path "*arthage*" | head -n 1)
-    if [ -z "$zip" ]; then echo "zip-builder produced no Firebase zip"; exit 1; fi
+    swift run --package-path "$sdk/zip-builder/scripts/zip_builder" --force-resolved-versions zip-builder release \
+        --package-path "$sdk/firebase-ios-sdk" \
+        --config "$sdk/zip-builder/zip_builder.jsonc" \
+        --version "$latest" \
+        --work-dir "$sdk/build"
+    local zip="$sdk/build/Firebase-$latest-latest.zip"
+    if [ ! -f "$zip" ]; then echo "zip_builder produced no $zip"; exit 1; fi
     mv "$zip" "$out/Firebase.zip"
 }
 
@@ -350,6 +358,8 @@ esac; done
 
 # Repos
 firebase_repo="https://github.com/firebase/firebase-ios-sdk"
+# firebase-ios-sdk commit providing scripts/zip_builder and zip_builder.jsonc
+zip_builder_ref="5c60b0783eefdc93202d95975cdbb6e801964c0e"
 xcframeworks_repo="https://github.com/smash-fit/firebase-ios-sdk-xcframeworks"
 
 # The products the noa apps use. Everything else in Firebase.zip is left out.
