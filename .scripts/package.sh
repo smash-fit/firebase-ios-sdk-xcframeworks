@@ -46,21 +46,21 @@ create_scratch () {
 
 build_firebase () {
     # Build Firebase.zip from firebase-ios-sdk at $latest with the selected Xcode, using
-    # Firebase's SwiftPM zip_builder and its config from $zip_builder_ref (which gives
-    # Firebase.zip's layout), and leave it in the current directory.
+    # Firebase's SwiftPM zip_builder from $zip_builder_ref and .scripts/zip_builder.jsonc
+    # (which gives Firebase.zip's layout), and leave it in the current directory.
     local out=$(pwd)
     git clone -q --depth 1 --branch "$latest" "$firebase_repo" "$sdk/firebase-ios-sdk"
     git init -q "$sdk/zip-builder"
     (
         cd "$sdk/zip-builder"
         git remote add origin "$firebase_repo"
-        git sparse-checkout set --no-cone /scripts/zip_builder/ /zip_builder.jsonc
+        git sparse-checkout set --no-cone /scripts/zip_builder/
         git fetch -q --depth 1 origin "$zip_builder_ref"
         git checkout -q FETCH_HEAD
     )
     swift run --package-path "$sdk/zip-builder/scripts/zip_builder" --force-resolved-versions zip-builder release \
         --package-path "$sdk/firebase-ios-sdk" \
-        --config "$sdk/zip-builder/zip_builder.jsonc" \
+        --config "$home/zip_builder.jsonc" \
         --version "$latest" \
         --work-dir "$sdk/build"
     local zip="$sdk/build/Firebase-$latest-latest.zip"
